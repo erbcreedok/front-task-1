@@ -21,7 +21,7 @@ class Finder {
         const svg = d3.select('body').append('svg')
             .attr('width', width)
             .attr('height', height)
-            .style('background', '#ccc')
+            .style('background', '#ccc');
 
         const g = svg.append('g');
 
@@ -36,7 +36,46 @@ class Finder {
             .attr('fill', '#fff')
             .attr('stroke', '#000')
             .attr('r', d => d.name === 'finish' || d.name === 'start' ? 10 : 5)
-            .attr('transform', d => `translate(${d.x},${d.y})`);
+            .attr('cx', d => d.x)
+            .attr('cy', d => d.y)
+        ;
+
+        const titles = g.selectAll('text').data(Object.values(points)).enter()
+            .append('text')
+            .attr('text-anchor', 'middle')
+            .attr("x", d => d.x)
+            .attr("y", d => d.y - 15)
+            .text(d => d.name);
+
+        let deltaX, deltaY;
+        d3.drag()
+            .on("start", function () {
+                const current = d3.select(this);
+                deltaX = current.attr("cx") - d3.event.x;
+                deltaY = current.attr("cy") - d3.event.y;
+            })
+            .on("drag", function (v) {
+                const x = d3.event.x + deltaX, y = d3.event.y + deltaY;
+                d3.select(this)
+                    .attr("cx", x)
+                    .attr("cy", y);
+                titles.filter(t => t.name === v.name)
+                    .attr("x", x)
+                    .attr("y", y - 15);
+                edges.filter(e => {
+                    if (e.parent.name === v.name) {
+                        e.parent.x = x;
+                        e.parent.y = y;
+                        return true;
+                    }
+                    if (e.children.name === v.name) {
+                        e.children.x = x;
+                        e.children.y = y;
+                        return  true;
+                    }
+                    return false;
+                }).attr('d', d => `M${d.parent.x},${d.parent.y} L${d.children.x},${d.children.y}`);
+            })(vertexes);
 
         return { edges, vertexes }
     }
